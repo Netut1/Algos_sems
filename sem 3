@@ -1,0 +1,218 @@
+#include <iostream>
+#include <string>
+#include <unordered_map>
+#include <stdexcept>
+
+using namespace std;
+
+template <typename T>
+class Stack {
+private:
+    T* data;
+    int capacity;
+    int topIndex;
+    void resize() {
+        int newCapacity = (capacity == 0) ? 1 : capacity * 2;
+        T* newData = new T[newCapacity];
+        for (int i = 0; i <= topIndex; i++)
+            newData[i] = data[i];
+        delete[] data;
+        data = newData;
+        capacity = newCapacity;
+    }
+public:
+    Stack() : data(nullptr), capacity(0), topIndex(-1) {}
+    ~Stack() { delete[] data; }
+    void push(T value) {
+        if (topIndex + 1 >= capacity) resize();
+        data[++topIndex] = value;
+    }
+    void pop() { if (topIndex >= 0) --topIndex; }
+    T top() { return data[topIndex]; }
+    bool empty() { return topIndex == -1; }
+    int size() { return topIndex + 1; }
+};
+
+template <typename T>
+class Queue {
+public:
+    virtual ~Queue() {}
+    virtual void enqueue(const T& item) = 0;
+    virtual T dequeue() = 0;
+    virtual T peek() = 0;
+    virtual bool isEmpty() = 0;
+    virtual int size() = 0;
+};
+
+template <typename T>
+class task1 : public Queue<T> {
+private:
+    Stack<T> input;
+    Stack<T> output;
+    void transfer() {
+        if (output.empty()) {
+            while (!input.empty()) {
+                output.push(input.top());
+                input.pop();
+            }
+        }
+    }
+public:
+    void enqueue(const T& item) override { input.push(item); }
+    T dequeue() override {
+        if (isEmpty())
+            throw runtime_error("Queue is empty");
+        transfer();
+        T value = output.top();
+        output.pop();
+        return value;
+    }
+    T peek() override {
+        if (isEmpty())
+            throw runtime_error("Queue is empty");
+        transfer();
+        return output.top();
+    }
+    bool isEmpty() override { return input.empty() && output.empty(); }
+    int size() override { return input.size() + output.size(); }
+};
+
+template <typename T>
+class task3 : public Queue<T> {
+private:
+    T* data;
+    int capacity;
+    int sized;
+    void resize() {
+        int newCapacity = (capacity == 0) ? 1 : capacity * 2;
+        T* newData = new T[newCapacity];
+        for (int i = 0; i < sized; i++)
+            newData[i] = data[i];
+        delete[] data;
+        data = newData;
+        capacity = newCapacity;
+    }
+
+    void siftUp(int index) {
+        while (index > 0) {
+            int parent = (index - 1) / 2;
+            if (data[index] > data[parent]) {
+                swap(data[index], data[parent]);
+                index = parent;
+            }
+            else break;
+        }
+    }
+
+    void siftDown(int index) {
+        while (true) {
+            int left = 2 * index + 1;
+            int right = 2 * index + 2;
+            int largest = index;
+            if (left < sized and data[left] > data[largest]) largest = left;
+            if (right < sized and data[right] > data[largest]) largest = right;
+            if (largest == index) break;
+            swap(data[index], data[largest]);
+            index = largest;
+        }
+    }
+
+public:
+    task3() : data(nullptr), capacity(0), sized(0) {}
+    ~task3() { delete[] data; }
+
+    void enqueue(const T& item) override {
+        if (sized == capacity) resize();
+        data[sized] = item;
+        ++sized;
+        siftUp(sized - 1);
+    }
+    T dequeue() override {
+        if (isEmpty())
+            throw runtime_error("PriorityQueue is empty");
+        T result = data[0];
+        data[0] = data[sized - 1];
+        sized--;
+        if (sized > 0) siftDown(0);
+        return result;
+    }
+    T peek() override {
+        if (isEmpty())
+            throw runtime_error("PriorityQueue is empty");
+        return data[0];
+    }
+    bool isEmpty() override { return sized == 0; }
+    int size() override { return sized; }
+};
+
+bool isValidParentheses(string s) {
+    task1<char> q;
+    for (char ch : s) q.enqueue(ch);
+    Stack<char> st;
+    unordered_map<char, char> matching = { {')','('}, {']','['}, {'}','{'} };
+    while (!q.isEmpty()) {
+        char ch = q.dequeue();
+        if (ch == '(' or ch == '[' or ch == '{')
+            st.push(ch);
+        else if (ch == ')' or ch == ']' or ch == '}') {
+            if (st.empty() or st.top() != matching[ch])
+                return false;
+            st.pop();
+        }
+    }
+    return st.empty();
+}
+
+struct Order {
+    int priority;
+    string description;
+    // Конструктор по умолчанию
+    Order() : priority(0), description("") {}
+    // Основной конструктор
+    Order(int p, const string& desc) : priority(p), description(desc) {}
+    bool operator>(const Order& other) const { return priority > other.priority; }
+    bool operator<(const Order& other) const { return priority < other.priority; }
+};
+
+class Restaurant {
+private:
+    task3<Order> orders;
+public:
+    void addOrder(const string& description, int priority) {
+        orders.enqueue(Order(priority, description));
+        cout << "  Добавлен: \"" << description << "\" (приоритет " << priority << ")" << endl;
+    }
+    string processNext() {
+        if (orders.isEmpty())
+            throw runtime_error("Нет заказов");
+        Order top = orders.dequeue();
+        return "  Обработан: \"" + top.description + "\" (приоритет " + to_string(top.priority) + ")";
+    }
+    bool isEmpty() { return orders.isEmpty(); }
+};
+
+int main() {
+    setlocale(LC_ALL, "rus");
+    cout << "Задание 1.\n";
+    task1<int> q;
+    q.enqueue(10);
+    q.enqueue(20);
+    q.enqueue(30);
+    cout << "Заполнение: " << q.dequeue() << endl;
+    cout << "Перемещение: " << q.peek() << endl;
+    cout << "Вывод: " << q.dequeue() << endl;
+    cout << "Размер: " << q.size() << endl;
+    cout << "\nЗадание 2.\n";
+    string tests[] = { "()[]{}", "([)]", "{[]}", "(((" };
+    for (string test : tests)
+        cout << test << " - " << boolalpha << isValidParentheses(test) << endl;
+    cout << "\nЗадание 3.\n";
+    Restaurant rs;
+    rs.addOrder("A", 1);
+    rs.addOrder("B", 10);
+    rs.addOrder("C", 2);
+    rs.addOrder("C+", 8);
+    cout << "\nОбработка:\n";
+    while (!rs.isEmpty()) cout << rs.processNext() << endl;
+    return 0;
+}
