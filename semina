@@ -1,0 +1,125 @@
+#include <iostream>
+#include <vector>
+#include <string>
+
+using namespace std;
+
+template <typename T> //для разных необходимых типов данных
+class Stack {
+private:
+    T* data; //массив
+    int capacity; //количество
+    int topIndex; //верх
+    void resize() { //Основной метод динамической реализации стека
+        int newCapacity = (capacity == 0) ? 1 : capacity * 2;
+        T* newData = new T[newCapacity];
+        for (int i = 0; i <= topIndex; ++i) {
+            newData[i] = data[i];
+        }
+        delete[] data;
+        data = newData;
+        capacity = newCapacity;
+    }
+public:
+    Stack() : data(nullptr), capacity(0), topIndex(-1) {} //Констуктор
+    void push(T value) { //Метод для вноса значения в стек
+        if (topIndex + 1 >= capacity) resize();
+        data[++topIndex] = value; //Сначала лучше заменить индекс
+    }
+    void pop() { if (topIndex >= 0) --topIndex; } //псевдоудаление сверху
+    T top() { return data[topIndex]; } //доступ к верху
+    bool empty() { return topIndex == -1; } //простое понимание размера
+    int size() { return topIndex + 1; } // доступ к размеру
+};
+
+// Проход слева направо, в стеке храним индексы.
+// Тип стека: возрастающий по значениям.
+vector<int> task1(vector<int> input) {
+    int size = input.size();
+    vector<int> result(size, -1); //новый размером size, заполненный -1.
+    Stack<int> stack; // создаем объект класса
+    for (int i = 0; i < size; i++) { //проход по всему массиву
+        while (!stack.empty() and input[stack.top()] > input[i]) { //проверка на то, что следующий меньше предыдущего
+            int idx = stack.top();
+            stack.pop(); //замена
+            result[idx] = input[i]; //результат в новый (если есть)
+        }
+        stack.push(i);
+    }
+    return result;
+}
+
+// Проход слева направо, в стеке храним char.
+// Стек возрастающий по индексам.
+string task2(string input) {
+    Stack<char> stack; // создаем объект класса
+    for (char next : input) { // проходим по строке
+        if (!stack.empty() and next == stack.top()) { //сравнение
+            stack.pop(); // да - уладяем и не добавляем (стока меньше)
+        }
+        else {
+            stack.push(next); // нет - добавляем
+        }
+    }
+    string result;
+    while (!stack.empty()) { // если что-то есть
+        result.push_back(stack.top()); // то просто char переносим в string
+        stack.pop(); //удаляем верх для дальнейшей работы
+    }
+    reverse(result.begin(), result.end()); //разворачиваем (в стек вносим в правильном порядке, а выносим в обратном)
+    return result;
+}
+
+bool task3(vector<int> pushed, vector<int> popped) { // здесь мы идем по 1 массиву, заполняя стек,
+    if (pushed.size() != popped.size()) return 0;    // а после проходим по второму и смотрим на верх стека, удаляя его
+    int size = pushed.size();
+    Stack<int> stack;
+    for (int i : pushed) {
+        stack.push(i);
+    }
+    for (int i : popped) {
+        if (stack.empty() or i != stack.top()) return false;
+        stack.pop();
+    }
+    return true;
+}
+
+vector<int> task4(vector<int> input) {
+    int n = input.size();
+    input.insert(input.end(), input.begin(), input.end()); // удваиваем массив для имитации цикличности
+    int size = input.size();
+    vector<int> result(size, -1); // result будет хранить ответы для удвоенного массива
+    Stack<int> stack; 
+    for (int i = 0; i < size; i++) {
+        while (!stack.empty() and input[stack.top()] < input[i]) { // пока находим больший элемент для индексов в стеке
+            int idx = stack.top();
+            stack.pop();
+            result[idx] = input[i];
+        }
+        if (i < n) { // кладём в стек только индексы первого прохода
+            stack.push(i);
+        }
+    }
+    return vector<int>(result.begin(), result.begin() + n); // возвращаем только первые n элементов
+}
+
+void main() {
+    vector<int> prime1 = {1, 2, 1};
+    vector<int> result1 = task1(prime1);
+    for (int i = 0; i < result1.size(); i++) {
+        cout << result1[i] << " ";
+    }
+    cout << endl;
+    string prime2 = "ttyyottuuitt";
+    string result2 = task2(prime2);
+    cout << result2 << endl;
+    vector<int> prime3_1 = {1, 2, 3, 4, 5};
+    vector<int> prime3_2 = {5, 4, 3, 2, 1};
+    bool result3 = task3(prime3_1, prime3_2);
+    cout << result3 << endl;
+    vector<int> result4 = task4(prime1);
+    for (int i = 0; i < result4.size(); i++) {
+        cout << result4[i] << " ";
+    }
+    cout << endl;
+}
